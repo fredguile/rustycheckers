@@ -7,8 +7,8 @@ pub struct GameEngine {
 }
 
 pub struct MoveResult {
-  pub mov: Move,
-  pub crowned: bool,
+    pub mov: Move,
+    pub crowned: bool,
 }
 
 impl GameEngine {
@@ -40,110 +40,127 @@ impl GameEngine {
             });
     }
 
+    pub fn get_piece(&self, coord: Coordinate) -> Result<GamePiece, ()> {
+        match self.board[coord.0][coord.1] {
+            Some(piece) => Ok(piece),
+            None => Err(()),
+        }
+    }
+
     pub fn move_piece(&mut self, mov: &Move) -> Result<MoveResult, ()> {
-      let legal_moves = self.legal_moves();
+        let legal_moves = self.legal_moves();
 
-      if !legal_moves.contains(mov) {
-        return Err(());
-      }
+        if !legal_moves.contains(mov) {
+            return Err(());
+        }
 
-      let Coordinate(fx, fy) = mov.from;
-      let Coordinate(tx, ty) = mov.to;
+        let Coordinate(fx, fy) = mov.from;
+        let Coordinate(tx, ty) = mov.to;
 
-      let piece = self.board[fx][fy].unwrap();
-      let midpiece_coords = self.midpiece_coords(fx, fy, tx, ty);
+        let piece = self.board[fx][fy].unwrap();
+        let midpiece_coords = self.midpiece_coords(fx, fy, tx, ty);
 
-      if let Some(Coordinate(x,y)) = midpiece_coords {
-        self.board[x][y] = None; // removed jumped piece
-      }
+        if let Some(Coordinate(x, y)) = midpiece_coords {
+            self.board[x][y] = None; // removed jumped piece
+        }
 
-      // move piece to dest
-      self.board[tx][ty] = Some(piece);
-      self.board[fx][fy] = None;
+        // move piece to dest
+        self.board[tx][ty] = Some(piece);
+        self.board[fx][fy] = None;
 
-      let crowned = if self.should_crown(piece, mov.to) {
-        self.crown_piece(mov.to);
-        true
-      } else {
-        false
-      };
+        let crowned = if self.should_crown(piece, mov.to) {
+            self.crown_piece(mov.to);
+            true
+        } else {
+            false
+        };
 
-      self.advance_turn();
+        self.advance_turn();
 
-      Ok(MoveResult {
-        mov: mov.clone(),
-        crowned
-      })
+        Ok(MoveResult {
+            mov: mov.clone(),
+            crowned,
+        })
+    }
+
+    pub fn current_turn(&self) -> PieceColor {
+        self.current_turn
     }
 
     fn advance_turn(&mut self) {
+        if self.current_turn == PieceColor::Black {
+            self.current_turn = PieceColor::White;
+        } else {
+            self.current_turn = PieceColor::Black;
+        }
+    }
 
+    pub fn move_count(&self) -> u32 {
+        self.move_count
     }
 
     fn legal_moves(&self) -> Vec<Move> {
-      let mut moves: Vec<Move> = Vec::new();
+        let mut moves: Vec<Move> = Vec::new();
 
-      for col in 0..8 {
-        for row in 0..8 {
-          if let Some(piece) = self.board[col][row] {
-            if piece.color == self.current_turn {
-              let loc = Coordinate(col, row);
-              let mut vmoves = self.valid_moves_from(loc);
-              moves.append(&mut vmoves);
+        for col in 0..8 {
+            for row in 0..8 {
+                if let Some(piece) = self.board[col][row] {
+                    if piece.color == self.current_turn {
+                        let loc = Coordinate(col, row);
+                        let mut vmoves = self.valid_moves_from(loc);
+                        moves.append(&mut vmoves);
+                    }
+                }
             }
-          }
         }
-      }
 
-      moves
+        moves
     }
 
     fn valid_moves_from(&self, loc: Coordinate) -> Vec<Move> {
-      let Coordinate(x, y) = loc;
+        let Coordinate(x, y) = loc;
 
-      if let Some(p) = self.board[x][y] {
-        let mut jumps = loc
-          .jumps_target_from()
-          .filter(|t| self.valid_move(&p, &loc, &t))
-          .map(|ref t| Move {
-            from: loc.clone(),
-            to: t.clone(),
-          })
-          .collect::<Vec<Move>>();
-        
-        let mut moves = loc
-          .moves_target_from()
-          .filter(|t| self.valid_jump(&p, &loc, &t))
-          .map(|ref t| Move {
-            from: loc.clone(),
-            to: t.clone(),
-          })
-          .collect::<Vec<Move>>();
+        if let Some(p) = self.board[x][y] {
+            let mut jumps = loc
+                .jumps_target_from()
+                .filter(|t| self.valid_move(&p, &loc, &t))
+                .map(|ref t| Move {
+                    from: loc.clone(),
+                    to: t.clone(),
+                })
+                .collect::<Vec<Move>>();
 
-        jumps.append(&mut moves);
-        jumps
-      } else {
-        Vec::new()
-      }
+            let mut moves = loc
+                .moves_target_from()
+                .filter(|t| self.valid_jump(&p, &loc, &t))
+                .map(|ref t| Move {
+                    from: loc.clone(),
+                    to: t.clone(),
+                })
+                .collect::<Vec<Move>>();
+
+            jumps.append(&mut moves);
+            jumps
+        } else {
+            Vec::new()
+        }
     }
 
     fn valid_move(&self, piece: &GamePiece, loc: &Coordinate, target: &Coordinate) -> bool {
-      false
+        false
     }
 
     fn valid_jump(&self, piece: &GamePiece, loc: &Coordinate, target: &Coordinate) -> bool {
-      false
+        false
     }
 
     fn midpiece_coords(&self, fx: usize, fy: usize, tx: usize, ty: usize) -> Option<Coordinate> {
-      None
+        None
     }
 
     fn should_crown(&self, piece: GamePiece, to: Coordinate) -> bool {
-      false
+        false
     }
 
-    fn crown_piece(&self, to: Coordinate) {
-
-    }
+    fn crown_piece(&self, to: Coordinate) {}
 }
